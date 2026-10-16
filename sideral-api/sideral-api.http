@@ -1,0 +1,23 @@
+@host = http://localhost:5000
+@token = paste-access-token-here
+
+### Ping
+GET {{host}}/api/ping
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "admin", "password": "Admin1234!" }
+
+### Me
+GET {{host}}/api/me
+Authorization: Bearer {{token}}
+
+### Users
+GET {{host}}/api/users?page=1&limit=20
+Authorization: Bearer {{token}}
+
+### Roles
+GET {{host}}/api/roles
+Authorization: Bearer {{token}}

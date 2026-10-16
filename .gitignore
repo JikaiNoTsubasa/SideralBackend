@@ -1,0 +1,13 @@
+bin/
+obj/
+# Artefact créé par dotnet-ef (chemin Windows littéral)
+bin\\Debug/
+.vs/
+.idea/
+*.user
+.history/
+
+# Configuration locale (secrets)
+appsettings.Development.json
+appsettings.Local.json
+appsettings.json

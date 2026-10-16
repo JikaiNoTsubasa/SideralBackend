@@ -1,0 +1,102 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ===== EF =====
+    // La chaîne de connexion est lue dans sideral-api/appsettings.Development.json
+    // (ou la variable d'environnement SIDERAL_CONNECTION_STRING)
+    {
+      "label": "EF - Add migration",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "add", "${input:migration_name}",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context",
+        "-o", "Migrations"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - Remove last migration",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "remove",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - List migrations",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "list",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - Update database",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "database", "update",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - Update database to migration",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "database", "update", "${input:target_migration}",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - Generate SQL script (idempotent)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "script", "--idempotent",
+        "--project", "sideral-context",
+        "--startup-project", "sideral-context",
+        "-o", "sql/sideral-schema.sql"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "EF - Update dotnet-ef tool",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["tool", "update", "-g", "dotnet-ef"],
+      "problemMatcher": []
+    }
+  ],
+  // ========== INPUTS ========================
+  "inputs": [
+    {
+      "id": "migration_name",
+      "type": "promptString",
+      "description": "Nom de la migration"
+    },
+    {
+      "id": "target_migration",
+      "type": "promptString",
+      "description": "Migration cible (nom, ou 0 pour tout annuler)"
+    }
+  ]
+}

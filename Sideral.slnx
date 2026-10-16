@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="dependancies/dependancies.csproj" />
+  <Project Path="sideral-api/sideral-api.csproj" />
+  <Project Path="sideral-context/sideral-context.csproj" />
+  <Project Path="sideral-jobcode/sideral-jobcode.csproj" />
+</Solution>
