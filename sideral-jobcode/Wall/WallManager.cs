@@ -39,16 +39,18 @@ public class WallManager : IScoped
             ?? throw _PostNotFound(postId);
     }
 
-    public async Task<PostView> CreatePost(long userId, string content, CancellationToken ct = default)
+    /// <summary>Publie un message ; une annonce (mise en avant) est réservée aux administrateurs.</summary>
+    public async Task<PostView> CreatePost(long userId, bool isAdmin, string content, bool isAnnouncement, CancellationToken ct = default)
     {
-        var post = new Post { AuthorId = userId, Content = _CheckContent(content, Post.CONTENT_MAX_LENGTH) };
+        _CheckAnnouncement(isAdmin, isAnnouncement, false);
+        var post = new Post { AuthorId = userId, Content = _CheckContent(content, Post.CONTENT_MAX_LENGTH), IsAnnouncement = isAnnouncement };
         _db.Posts.Add(post);
         await _db.SaveChangesAsync(ct);
         return await GetPost(userId, post.Id, ct);
     }
 
-    /// <summary>Seul l'auteur peut modifier son message.</summary>
-    public async Task<PostView> UpdatePost(long userId, long postId, string content, CancellationToken ct = default)
+    /// <summary>Seul l'auteur peut modifier son message ; seul un administrateur peut en faire (ou défaire) une annonce.</summary>
+    public async Task<PostView> UpdatePost(long userId, bool isAdmin, long postId, string content, bool isAnnouncement, CancellationToken ct = default)
     {
         var post = await _FindPost(postId, ct);
         if (post.AuthorId != userId)
@@ -56,7 +58,9 @@ public class WallManager : IScoped
             throw new ApiException("Not post author", "Vous ne pouvez modifier que vos propres messages.", ApiException.TypeError.FORBIDDEN, "WALL_002");
         }
 
+        _CheckAnnouncement(isAdmin, isAnnouncement, post.IsAnnouncement);
         post.Content = _CheckContent(content, Post.CONTENT_MAX_LENGTH);
+        post.IsAnnouncement = isAnnouncement;
         post.UpdatedOn = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return await GetPost(userId, postId, ct);
@@ -151,6 +155,7 @@ public class WallManager : IScoped
         p.Id,
         new AuthorView(p.Author!.Id, p.Author.Firstname, p.Author.Lastname, p.Author.JobTitle, p.Author.Avatar),
         p.Content,
+        p.IsAnnouncement,
         p.CreatedOn,
         p.UpdatedOn,
         p.Likes.Count,
@@ -190,6 +195,14 @@ public class WallManager : IScoped
 
     private static ApiException _PostNotFound(long postId) =>
         new("Post not found", $"Message {postId} introuvable.", ApiException.TypeError.RESSOURCE_NOT_FOUND, "WALL_001");
+
+    private static void _CheckAnnouncement(bool isAdmin, bool isAnnouncement, bool wasAnnouncement)
+    {
+        if (isAnnouncement != wasAnnouncement && !isAdmin)
+        {
+            throw new ApiException("Admin only", "Seul un administrateur peut publier une annonce.", ApiException.TypeError.FORBIDDEN, "WALL_008");
+        }
+    }
 
     private static string _CheckContent(string content, int maxLength)
     {

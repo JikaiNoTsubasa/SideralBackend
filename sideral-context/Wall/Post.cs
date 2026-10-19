@@ -19,6 +19,9 @@ public class Post
     [MaxLength(CONTENT_MAX_LENGTH)]
     public required string Content { get; set; }
 
+    /// <summary>Annonce officielle (mise en avant sur le mur) : réservée aux administrateurs.</summary>
+    public bool IsAnnouncement { get; set; }
+
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedOn { get; set; }
 

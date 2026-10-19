@@ -74,11 +74,12 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | GET/POST | `/api/users` | ADMIN (création : identifiant généré automatiquement) |
 | GET | `/api/users/login-suggestion?firstname=&lastname=` | ADMIN (identifiant qui sera attribué : 1re lettre du prénom + 2 premières du nom, en majuscules ; si pris, lettres suivantes du nom) |
 | GET/PUT/DELETE | `/api/users/{id}` | ADMIN (suppression logique) |
-| GET/POST | `/api/posts` | connecté (mur, paginé, plus récents d'abord) |
+| GET/POST | `/api/posts` | connecté (mur, paginé, plus récents d'abord ; `isAnnouncement` réservé aux ADMIN) |
 | GET/PUT/DELETE | `/api/posts/{id}` | connecté (PUT : auteur ; DELETE : auteur ou ADMIN) |
 | PUT/DELETE | `/api/posts/{id}/like` | connecté |
 | GET/POST | `/api/posts/{id}/comments` | connecté |
 | DELETE | `/api/posts/{id}/comments/{commentId}` | auteur du commentaire, auteur du message ou ADMIN |
+| GET | `/api/link-preview?url=` | connecté, 60 / min / utilisateur (aperçu d'un lien du mur ; 204 si indisponible) |
 | GET/POST | `/api/groups` | ADMIN (groupes d'utilisateurs) |
 | GET/PUT/DELETE | `/api/groups/{id}` | ADMIN |
 | GET | `/api/principals?search=&users=&groups=` | connecté (recherche d'utilisateurs / groupes pour les droits) |
@@ -112,13 +113,18 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | GET | `/api/admin/fulltext/queue?status=PENDING\|FAILED&page=&limit=` | ADMIN (documents en attente et / ou en échec, paginés) |
 | POST | `/api/admin/fulltext/reindex?onlyFailed=` | ADMIN (remise en file d'indexation) |
 
+### Aperçus de liens (mur)
+- `LinkPreviewManager` : YouTube via oEmbed (`youtube.com/oembed`, miniature `i.ytimg.com`), autres sites via les balises OpenGraph / Twitter / `<title>` (512 Ko lus au maximum, 6 s, 3 redirections). Cache mémoire 6 h (30 min pour un échec).
+- Protection SSRF : client HTTP `linkpreview` avec `SafeHttpHandler`, qui refuse de se connecter aux adresses privées, locales, lien local (métadonnées cloud) ou réservées, vérifiées sur l'adresse réellement connectée (redirections et DNS rebinding compris).
+- Les images d'aperçu sont chargées directement par le navigateur depuis le site d'origine (`referrerpolicy="no-referrer"`).
+
 ### Full text (SokaFT)
 - Serveur : [SokaFT](https://github.com/JikaiNoTsubasa/SokaFT). Sideral appelle `POST {url}/api/index/queue {name, content, identifier, application}` ; `identifier` = GUID propre à chaque document (`documents.full_text_identifier`, index unique), renvoyé par la recherche pour retrouver le document, `application` = code application, `content` = **texte extrait par Sideral** (SokaFT n'extrait pas le texte des fichiers).
 - Configuration en base (`app_settings`, clés `fulltext.*`) via Admin > Full Text Server : activation, URL, code application et planification de l'indexeur (délai entre deux passages, 30 s par défaut ; documents par lot, 10 ; délai max. entre deux tentatives, 60 min). SokaFT n'a pas d'authentification : aucune clé d'API.
 - Extraction (`DocumentTextExtractor`) : texte brut, PDF (PdfPig), docx / xlsx / pptx, odt / ods / odp ; autres formats : seul le nom est indexé. 2 millions de caractères maximum.
 - Indexation (`FullTextIndexer`, tâche de fond) : chaque document a un état `full_text_status` (`PENDING` / `INDEXED` / `FAILED`). Nouveau document, nouvelle version, restauration, renommage → `PENDING` et réveil immédiat de la tâche ; sinon un passage selon la planification, lot plein = passage suivant immédiat. Serveur injoignable → nouvelle tentative après 1, 2, 4… min, jusqu'au plafond configuré. La planification est relue à chaque passage (enregistrer la configuration réveille la tâche). Rien n'est envoyé tant que le full text est désactivé. Changer le code application remet tous les documents en attente.
 - Recherche (`DocumentSearchManager`) : nom / description dans la base Sideral (tous les mots) + contenu via `POST {url}/api/index/search {search, application}` (texte échappé en syntaxe Lucene, joker `*` en fin de mot conservé). Les identifiants renvoyés sont retrouvés par `full_text_identifier` ; on ne garde que les documents hors corbeille dans un dossier lisible par l'utilisateur. Serveur indisponible : résultats sur le nom seulement, avec un avertissement. Limites SokaFT : 10 résultats maximum, sans tri par pertinence.
-- Test de connexion : SokaFT n'a pas d'endpoint de santé ; toute réponse HTTP de l'URL racine (404 compris) hors 5xx = serveur joignable.
+- Test de connexion : `GET {url}/api/health`, qui doit répondre 2xx (404 = mauvaise URL ou serveur qui n'est pas SokaFT).
 
 ### GED (documents)
 - **Droits** : par dossier, à des utilisateurs ou des groupes, niveaux `Read` (lecteur) < `Write` (contributeur) < `Manage` (gestionnaire). Un sous-dossier hérite des droits de son parent (`inherit_permissions`), en plus des siens ; l'héritage peut être désactivé. Les ADMIN sont gestionnaires partout et seuls à créer des dossiers racine.

@@ -33,15 +33,15 @@ public class PostsController : BaseController
     [ProducesResponseType<PostDto>(StatusCodes.Status201Created)]
     public async Task<ActionResult<PostDto>> Create([FromBody] PostRequest request, CancellationToken ct)
     {
-        var post = await _wallManager.CreatePost(LoggedUserId, request.Content, ct);
+        var post = await _wallManager.CreatePost(LoggedUserId, IsAdmin, request.Content, request.IsAnnouncement, ct);
         return CreatedAtAction(nameof(Get), new { id = post.Id }, PostDto.From(post));
     }
 
-    /// <summary>Modification réservée à l'auteur.</summary>
+    /// <summary>Modification réservée à l'auteur (IsAnnouncement modifiable par un administrateur uniquement).</summary>
     [HttpPut("{id:long}")]
     public async Task<ActionResult<PostDto>> Update(long id, [FromBody] PostRequest request, CancellationToken ct)
     {
-        return PostDto.From(await _wallManager.UpdatePost(LoggedUserId, id, request.Content, ct));
+        return PostDto.From(await _wallManager.UpdatePost(LoggedUserId, IsAdmin, id, request.Content, request.IsAnnouncement, ct));
     }
 
     /// <summary>Suppression par l'auteur ou un administrateur.</summary>

@@ -11,6 +11,7 @@ using sideral_context;
 using sideral_context.Users;
 using sideral_jobcode.Auth;
 using sideral_jobcode.FullText;
+using sideral_jobcode.LinkPreview;
 using sideral_jobcode.Storage;
 using sideral_jobcode.Users;
 
@@ -20,6 +21,7 @@ public partial class Program
 {
     public const string ADMIN_POLICY = "Admin";
     public const string AUTH_RATE_LIMIT = "auth";
+    public const string LINK_PREVIEW_RATE_LIMIT = "link-preview";
     public const string CORS_POLICY = "Frontend";
 
     public static async Task Main(string[] args)
@@ -48,6 +50,12 @@ public partial class Program
         builder.Services.AddMarkedServices(typeof(IHash).Assembly, typeof(AuthManager).Assembly);
         builder.Services.AddHttpClient(FullTextManager.HTTP_CLIENT);
         builder.Services.AddHostedService<FullTextIndexer>();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddHttpClient(LinkPreviewManager.HTTP_CLIENT, client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; SideralBot/1.0; link preview)");
+            })
+            .ConfigurePrimaryHttpMessageHandler(SafeHttpHandler.Create);
 
         builder.Services.AddControllers()
             .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -99,6 +107,10 @@ public partial class Program
             options.AddPolicy(AUTH_RATE_LIMIT, ctx => RateLimitPartition.GetFixedWindowLimiter(
                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+            // Aperçus de liens : l'API télécharge des pages externes, on limite par utilisateur
+            options.AddPolicy(LINK_PREVIEW_RATE_LIMIT, ctx => RateLimitPartition.GetFixedWindowLimiter(
+                ctx.User.FindFirst(AuthorizationTokenGenerator.USER_ID_CLAIM)?.Value ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
         });
 
         var app = builder.Build();
@@ -118,8 +130,9 @@ public partial class Program
         }
 
         app.UseCors(CORS_POLICY);
-        app.UseRateLimiter();
         app.UseAuthentication();
+        // Après l'authentification : les limites par utilisateur (aperçus de liens) lisent le claim "sub"
+        app.UseRateLimiter();
         app.UseAuthorization();
         app.MapControllers();
 

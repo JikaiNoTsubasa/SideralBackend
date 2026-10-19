@@ -17,11 +17,12 @@ public record CommentDto(long Id, long PostId, AuthorDto Author, string Content,
         comment.CreatedOn);
 }
 
-/// <summary>Message du mur. LatestComments contient les derniers commentaires, du plus ancien au plus récent.</summary>
+/// <summary>Message du mur (IsAnnouncement = annonce mise en avant). LatestComments : derniers commentaires, du plus ancien au plus récent.</summary>
 public record PostDto(
     long Id,
     AuthorDto Author,
     string Content,
+    bool IsAnnouncement,
     DateTime CreatedOn,
     DateTime? UpdatedOn,
     int LikeCount,
@@ -33,6 +34,7 @@ public record PostDto(
         post.Id,
         AuthorDto.From(post.Author),
         post.Content,
+        post.IsAnnouncement,
         post.CreatedOn,
         post.UpdatedOn,
         post.LikeCount,
@@ -44,4 +46,10 @@ public record PostDto(
 public record LikeDto(long PostId, int LikeCount, bool LikedByMe)
 {
     public static LikeDto From(LikeView like) => new(like.PostId, like.LikeCount, like.LikedByMe);
+}
+
+/// <summary>Aperçu d'un lien publié sur le mur. YoutubeVideoId renseigné pour une vidéo YouTube (lecteur intégré).</summary>
+public record LinkPreviewDto(string Url, string? Title, string? Description, string? ImageUrl, string? SiteName, string? YoutubeVideoId)
+{
+    public static LinkPreviewDto From(sideral_jobcode.LinkPreview.LinkPreviewView p) => new(p.Url, p.Title, p.Description, p.ImageUrl, p.SiteName, p.YoutubeVideoId);
 }

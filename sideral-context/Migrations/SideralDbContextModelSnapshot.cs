@@ -693,6 +693,10 @@ namespace sideral_context.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
+                    b.Property<bool>("IsAnnouncement")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_announcement");
+
                     b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");

@@ -8,6 +8,7 @@ public record PostView(
     long Id,
     AuthorView Author,
     string Content,
+    bool IsAnnouncement,
     DateTime CreatedOn,
     DateTime? UpdatedOn,
     int LikeCount,

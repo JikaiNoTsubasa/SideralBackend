@@ -189,7 +189,7 @@ public partial class FullTextManager : IScoped
                 .SetProperty(d => d.FullTextError, (string?)null), ct);
 
     /// <summary>
-    /// Vérifie que le serveur répond (réponse HTTP hors 5xx). url null = URL enregistrée,
+    /// Vérifie que le serveur répond : GET {url}/api/health doit renvoyer un succès (2xx). url null = URL enregistrée,
     /// ce qui permet de tester une URL avant de l'enregistrer.
     /// </summary>
     public async Task<FullTextStatusView> Check(string? url = null, CancellationToken ct = default)
@@ -203,8 +203,7 @@ public partial class FullTextManager : IScoped
         }
         _CheckUrl(url);
 
-        // SokaFT n'a pas d'endpoint de santé : toute réponse HTTP sur l'URL racine (404 compris) prouve que le serveur répond
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{url}/api/health");
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(CHECK_TIMEOUT);
@@ -213,9 +212,11 @@ public partial class FullTextManager : IScoped
         {
             using var response = await _httpClientFactory.CreateClient(HTTP_CLIENT).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             var status = (int)response.StatusCode;
-            var (reachable, message) = status >= 500
-                ? (false, $"Le serveur répond avec une erreur (HTTP {status}).")
-                : (true, "Le serveur full text répond.");
+            var (reachable, message) = response.IsSuccessStatusCode
+                ? (true, "Le serveur full text répond.")
+                : status == 404
+                    ? (false, "Le serveur répond mais /api/health est introuvable : vérifiez l'URL (serveur SokaFT ?).")
+                    : (false, $"Le serveur répond avec une erreur (HTTP {status}).");
             return new FullTextStatusView(reachable, status, watch.ElapsedMilliseconds, message, DateTime.UtcNow);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
