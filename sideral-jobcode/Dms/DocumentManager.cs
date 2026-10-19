@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using sideral_context;
 using sideral_context.Dms;
 using sideral_context.Users;
+using sideral_jobcode.FullText;
 using sideral_jobcode.Storage;
 
 namespace sideral_jobcode.Dms;
@@ -22,8 +23,9 @@ public class DocumentManager : IScoped
     private readonly DmsActivityLog _activity;
     private readonly DocumentStorage _storage;
     private readonly DocumentContentLinks _links;
+    private readonly FullTextQueue _fullText;
 
-    public DocumentManager(SideralDbContext db, DmsAccess access, DmsNames names, DmsActivityLog activity, DocumentStorage storage, DocumentContentLinks links)
+    public DocumentManager(SideralDbContext db, DmsAccess access, DmsNames names, DmsActivityLog activity, DocumentStorage storage, DocumentContentLinks links, FullTextQueue fullText)
     {
         _db = db;
         _access = access;
@@ -31,6 +33,7 @@ public class DocumentManager : IScoped
         _activity = activity;
         _storage = storage;
         _links = links;
+        _fullText = fullText;
     }
 
     public async Task<DocumentView> Get(long userId, bool isAdmin, long documentId, CancellationToken ct = default)
@@ -106,6 +109,7 @@ public class DocumentManager : IScoped
 
             _activity.Add(userId, DmsAction.DOCUMENT_CREATED, folderId, document.Id, "Version 1.0");
             await _db.SaveChangesAsync(ct);
+            _fullText.Notify();
 
             return await Get(userId, isAdmin, document.Id, ct);
         }
@@ -131,6 +135,7 @@ public class DocumentManager : IScoped
             await _names.EnsureAvailable(document.FolderId, name, exceptDocumentId: documentId, ct: ct);
             changes.Add($"Renommé : « {document.Name} » → « {name} »");
             document.Name = name;
+            document.QueueFullText();
         }
         if (document.Description != description)
         {
@@ -143,6 +148,7 @@ public class DocumentManager : IScoped
             document.UpdatedOn = DateTime.UtcNow;
             _activity.Add(userId, DmsAction.DOCUMENT_UPDATED, document.FolderId, documentId, string.Join(" ; ", changes));
             await _db.SaveChangesAsync(ct);
+            _fullText.Notify();
         }
         return await Get(userId, isAdmin, documentId, ct);
     }
@@ -416,11 +422,13 @@ public class DocumentManager : IScoped
         }
     }
 
+    /// <summary>Nouvelle version enregistrée : libère l'extraction et demande la réindexation full text.</summary>
     private static void _Release(Document document)
     {
         document.CheckedOutById = null;
         document.CheckedOutOn = null;
         document.UpdatedOn = DateTime.UtcNow;
+        document.QueueFullText();
     }
 
     private async Task<DocumentVersion> _CurrentVersion(long documentId, CancellationToken ct) =>
@@ -436,6 +444,7 @@ public class DocumentManager : IScoped
         try
         {
             await _db.SaveChangesAsync(ct);
+            _fullText.Notify();
         }
         catch (DbUpdateException ex)
         {

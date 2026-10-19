@@ -105,6 +105,19 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | POST | `/api/trash/{folders\|documents}/{id}/restore` | gestionnaire |
 | DELETE | `/api/trash/{folders\|documents}/{id}` | gestionnaire (suppression définitive) |
 
+| GET/PUT | `/api/admin/fulltext` | ADMIN (configuration du serveur full text : activation, URL, code application) |
+| POST | `/api/admin/fulltext/check` | ADMIN (test de connexion, URL saisie ou enregistrée) |
+| GET | `/api/admin/fulltext/stats` | ADMIN (documents par état d'indexation, dernier / prochain passage de l'indexeur) |
+| GET | `/api/admin/fulltext/queue?status=PENDING\|FAILED&page=&limit=` | ADMIN (documents en attente et / ou en échec, paginés) |
+| POST | `/api/admin/fulltext/reindex?onlyFailed=` | ADMIN (remise en file d'indexation) |
+
+### Full text (SokaFT)
+- Serveur : [SokaFT](https://github.com/JikaiNoTsubasa/SokaFT). Sideral appelle `POST {url}/api/index/queue {name, content, identifier, application}` ; `identifier` = GUID propre à chaque document (`documents.full_text_identifier`, index unique), renvoyé par la recherche pour retrouver le document, `application` = code application, `content` = **texte extrait par Sideral** (SokaFT n'extrait pas le texte des fichiers).
+- Configuration en base (`app_settings`, clés `fulltext.*`) via Admin > Full Text Server : activation, URL, code application et planification de l'indexeur (délai entre deux passages, 30 s par défaut ; documents par lot, 10 ; délai max. entre deux tentatives, 60 min). SokaFT n'a pas d'authentification : aucune clé d'API.
+- Extraction (`DocumentTextExtractor`) : texte brut, PDF (PdfPig), docx / xlsx / pptx, odt / ods / odp ; autres formats : seul le nom est indexé. 2 millions de caractères maximum.
+- Indexation (`FullTextIndexer`, tâche de fond) : chaque document a un état `full_text_status` (`PENDING` / `INDEXED` / `FAILED`). Nouveau document, nouvelle version, restauration, renommage → `PENDING` et réveil immédiat de la tâche ; sinon un passage selon la planification, lot plein = passage suivant immédiat. Serveur injoignable → nouvelle tentative après 1, 2, 4… min, jusqu'au plafond configuré. La planification est relue à chaque passage (enregistrer la configuration réveille la tâche). Rien n'est envoyé tant que le full text est désactivé. Changer le code application remet tous les documents en attente.
+- Test de connexion : SokaFT n'a pas d'endpoint de santé ; toute réponse HTTP de l'URL racine (404 compris) hors 5xx = serveur joignable.
+
 ### GED (documents)
 - **Droits** : par dossier, à des utilisateurs ou des groupes, niveaux `Read` (lecteur) < `Write` (contributeur) < `Manage` (gestionnaire). Un sous-dossier hérite des droits de son parent (`inherit_permissions`), en plus des siens ; l'héritage peut être désactivé. Les ADMIN sont gestionnaires partout et seuls à créer des dossiers racine.
 - Calcul : `DmsAccess` charge l'arbre complet des dossiers (colonnes légères) et les droits de l'utilisateur à chaque requête (`FolderTree`). Suffisant pour quelques milliers de dossiers ; au-delà, prévoir un chemin matérialisé.

@@ -10,6 +10,7 @@ using sideral_api.Classes;
 using sideral_context;
 using sideral_context.Users;
 using sideral_jobcode.Auth;
+using sideral_jobcode.FullText;
 using sideral_jobcode.Storage;
 using sideral_jobcode.Users;
 
@@ -45,6 +46,8 @@ public partial class Program
         // ---- Services
         builder.Services.AddDbContext<SideralDbContext>(options => SideralDbContext.Configure(options, connectionString));
         builder.Services.AddMarkedServices(typeof(IHash).Assembly, typeof(AuthManager).Assembly);
+        builder.Services.AddHttpClient(FullTextManager.HTTP_CLIENT);
+        builder.Services.AddHostedService<FullTextIndexer>();
 
         builder.Services.AddControllers()
             .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

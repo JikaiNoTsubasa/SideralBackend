@@ -558,3 +558,109 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    ALTER TABLE documents ADD full_text_attempts integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    ALTER TABLE documents ADD full_text_error character varying(1000);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    ALTER TABLE documents ADD full_text_indexed_on timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    ALTER TABLE documents ADD full_text_next_attempt_on timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    ALTER TABLE documents ADD full_text_status character varying(20) NOT NULL DEFAULT 'PENDING';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    CREATE TABLE app_settings (
+        key character varying(100) NOT NULL,
+        value text,
+        updated_on timestamp with time zone NOT NULL,
+        updated_by_id bigint,
+        CONSTRAINT pk_app_settings PRIMARY KEY (key),
+        CONSTRAINT fk_app_settings_users_updated_by_id FOREIGN KEY (updated_by_id) REFERENCES users (id) ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    CREATE INDEX ix_documents_full_text_status_full_text_next_attempt_on ON documents (full_text_status, full_text_next_attempt_on);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    CREATE INDEX ix_app_settings_updated_by_id ON app_settings (updated_by_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019133741_AddSettingsAndFullText') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261019133741_AddSettingsAndFullText', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019142613_AddDocumentFullTextIdentifier') THEN
+    ALTER TABLE documents ADD full_text_identifier uuid NOT NULL DEFAULT (gen_random_uuid());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019142613_AddDocumentFullTextIdentifier') THEN
+    CREATE UNIQUE INDEX ix_documents_full_text_identifier ON documents (full_text_identifier);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019142613_AddDocumentFullTextIdentifier') THEN
+    UPDATE documents SET full_text_status = 'PENDING', full_text_attempts = 0, full_text_next_attempt_on = NULL, full_text_error = NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261019142613_AddDocumentFullTextIdentifier') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261019142613_AddDocumentFullTextIdentifier', '10.0.13');
+    END IF;
+END $EF$;
+COMMIT;
+

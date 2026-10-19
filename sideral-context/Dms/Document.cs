@@ -45,5 +45,30 @@ public class Document
     public long? DeletedById { get; set; }
     public User? DeletedBy { get; set; }
 
+    /// <summary>
+    /// Identifiant du document sur le serveur full text (envoyé à l'indexation, renvoyé par la recherche).
+    /// Généré par Sideral, indépendant de l'id technique.
+    /// </summary>
+    public Guid FullTextIdentifier { get; set; } = Guid.NewGuid();
+
+    /// <summary>Indexation full text de la version courante (voir sideral_jobcode.FullText.FullTextIndexer).</summary>
+    public FullTextStatus FullTextStatus { get; set; } = FullTextStatus.PENDING;
+    public DateTime? FullTextIndexedOn { get; set; }
+    public int FullTextAttempts { get; set; }
+    /// <summary>Prochaine tentative après une erreur temporaire (serveur injoignable...).</summary>
+    public DateTime? FullTextNextAttemptOn { get; set; }
+
+    [MaxLength(1000)]
+    public string? FullTextError { get; set; }
+
     public ICollection<DocumentVersion> Versions { get; set; } = [];
+
+    /// <summary>Demande une (ré)indexation : contenu ou nom modifié.</summary>
+    public void QueueFullText()
+    {
+        FullTextStatus = FullTextStatus.PENDING;
+        FullTextAttempts = 0;
+        FullTextNextAttemptOn = null;
+        FullTextError = null;
+    }
 }

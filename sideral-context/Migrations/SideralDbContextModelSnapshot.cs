@@ -153,6 +153,37 @@ namespace sideral_context.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("folder_id");
 
+                    b.Property<int>("FullTextAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("full_text_attempts");
+
+                    b.Property<string>("FullTextError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("full_text_error");
+
+                    b.Property<Guid>("FullTextIdentifier")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("full_text_identifier")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime?>("FullTextIndexedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("full_text_indexed_on");
+
+                    b.Property<DateTime?>("FullTextNextAttemptOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("full_text_next_attempt_on");
+
+                    b.Property<string>("FullTextStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("PENDING")
+                        .HasColumnName("full_text_status");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -177,6 +208,13 @@ namespace sideral_context.Migrations
 
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_documents_folder_id");
+
+                    b.HasIndex("FullTextIdentifier")
+                        .IsUnique()
+                        .HasDatabaseName("ix_documents_full_text_identifier");
+
+                    b.HasIndex("FullTextStatus", "FullTextNextAttemptOn")
+                        .HasDatabaseName("ix_documents_full_text_status_full_text_next_attempt_on");
 
                     b.ToTable("documents", (string)null);
                 });
@@ -400,6 +438,34 @@ namespace sideral_context.Migrations
                         .HasDatabaseName("ix_groups_name");
 
                     b.ToTable("groups", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Settings.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("key");
+
+                    b.Property<long?>("UpdatedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by_id");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key")
+                        .HasName("pk_app_settings");
+
+                    b.HasIndex("UpdatedById")
+                        .HasDatabaseName("ix_app_settings_updated_by_id");
+
+                    b.ToTable("app_settings", (string)null);
                 });
 
             modelBuilder.Entity("sideral_context.Users.RefreshToken", b =>
@@ -880,6 +946,17 @@ namespace sideral_context.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("sideral_context.Settings.AppSetting", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_app_settings_users_updated_by_id");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("sideral_context.Users.RefreshToken", b =>

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using sideral_context.Dms;
 using sideral_context.Groups;
+using sideral_context.Settings;
 using sideral_context.Users;
 using sideral_context.Wall;
 
@@ -20,6 +21,7 @@ public class SideralDbContext : DbContext
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();
     public DbSet<DmsActivity> DmsActivities => Set<DmsActivity>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
     public SideralDbContext(DbContextOptions<SideralDbContext> options) : base(options)
     {
@@ -129,6 +131,10 @@ public class SideralDbContext : DbContext
         {
             e.HasIndex(d => d.FolderId);
             e.HasIndex(d => d.CheckedOutById);
+            e.HasIndex(d => new { d.FullTextStatus, d.FullTextNextAttemptOn });
+            e.HasIndex(d => d.FullTextIdentifier).IsUnique();
+            e.Property(d => d.FullTextIdentifier).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(d => d.FullTextStatus).HasConversion<string>().HasMaxLength(20).HasDefaultValue(FullTextStatus.PENDING);
             e.HasOne(d => d.Folder).WithMany(f => f.Documents).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(d => d.CreatedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.CheckedOutBy).WithMany().OnDelete(DeleteBehavior.Restrict);
@@ -150,6 +156,11 @@ public class SideralDbContext : DbContext
             e.HasOne(a => a.Folder).WithMany().OnDelete(DeleteBehavior.Cascade);
             e.HasOne(a => a.Document).WithMany().OnDelete(DeleteBehavior.Cascade);
             e.HasOne(a => a.User).WithMany().OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AppSetting>(e =>
+        {
+            e.HasOne(s => s.UpdatedBy).WithMany().OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
