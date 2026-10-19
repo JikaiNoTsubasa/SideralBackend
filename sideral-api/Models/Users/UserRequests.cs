@@ -2,11 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace sideral_api.Models.Users;
 
+/// <summary>L'identifiant est généré automatiquement (voir GET /api/users/login-suggestion).</summary>
 public class CreateUserRequest
 {
-    [Required, MaxLength(100)]
-    public string Login { get; set; } = string.Empty;
-
     [Required, EmailAddress, MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 

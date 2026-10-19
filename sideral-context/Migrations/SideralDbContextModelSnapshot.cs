@@ -22,6 +22,25 @@ namespace sideral_context.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GroupUser", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("group_id");
+
+                    b.Property<long>("MembersId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("members_id");
+
+                    b.HasKey("GroupId", "MembersId")
+                        .HasName("pk_group_members");
+
+                    b.HasIndex("MembersId")
+                        .HasDatabaseName("ix_group_members_members_id");
+
+                    b.ToTable("group_members", (string)null);
+                });
+
             modelBuilder.Entity("RoleUser", b =>
                 {
                     b.Property<long>("RolesId")
@@ -39,6 +58,348 @@ namespace sideral_context.Migrations
                         .HasDatabaseName("ix_user_roles_users_id");
 
                     b.ToTable("user_roles", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.DmsActivity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<long?>("DocumentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("document_id");
+
+                    b.Property<long>("FolderId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("folder_id");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_dms_activities");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_dms_activities_user_id");
+
+                    b.HasIndex("DocumentId", "CreatedOn")
+                        .HasDatabaseName("ix_dms_activities_document_id_created_on");
+
+                    b.HasIndex("FolderId", "CreatedOn")
+                        .HasDatabaseName("ix_dms_activities_folder_id_created_on");
+
+                    b.ToTable("dms_activities", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Document", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("CheckedOutById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("checked_out_by_id");
+
+                    b.Property<DateTime?>("CheckedOutOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_out_on");
+
+                    b.Property<long>("CreatedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<long?>("DeletedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_on");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<long>("FolderId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("folder_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.HasKey("Id")
+                        .HasName("pk_documents");
+
+                    b.HasIndex("CheckedOutById")
+                        .HasDatabaseName("ix_documents_checked_out_by_id");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_documents_created_by_id");
+
+                    b.HasIndex("DeletedById")
+                        .HasDatabaseName("ix_documents_deleted_by_id");
+
+                    b.HasIndex("FolderId")
+                        .HasDatabaseName("ix_documents_folder_id");
+
+                    b.ToTable("documents", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.DocumentVersion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comment");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<long>("CreatedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("document_id");
+
+                    b.Property<int>("Major")
+                        .HasColumnType("integer")
+                        .HasColumnName("major");
+
+                    b.Property<int>("Minor")
+                        .HasColumnType("integer")
+                        .HasColumnName("minor");
+
+                    b.Property<string>("OriginalName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("original_name");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sha256");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("storage_key");
+
+                    b.HasKey("Id")
+                        .HasName("pk_document_versions");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_document_versions_created_by_id");
+
+                    b.HasIndex("DocumentId", "Major", "Minor")
+                        .IsUnique()
+                        .HasDatabaseName("ix_document_versions_document_id_major_minor");
+
+                    b.ToTable("document_versions", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Folder", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CreatedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<long?>("DeletedById")
+                        .HasColumnType("bigint")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_on");
+
+                    b.Property<bool>("InheritPermissions")
+                        .HasColumnType("boolean")
+                        .HasColumnName("inherit_permissions");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<long?>("ParentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("parent_id");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.HasKey("Id")
+                        .HasName("pk_folders");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_folders_created_by_id");
+
+                    b.HasIndex("DeletedById")
+                        .HasDatabaseName("ix_folders_deleted_by_id");
+
+                    b.HasIndex("ParentId")
+                        .HasDatabaseName("ix_folders_parent_id");
+
+                    b.ToTable("folders", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.FolderPermission", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("FolderId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("folder_id");
+
+                    b.Property<long?>("GroupId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("group_id");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<long?>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_folder_permissions");
+
+                    b.HasIndex("GroupId")
+                        .HasDatabaseName("ix_folder_permissions_group_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_folder_permissions_user_id");
+
+                    b.HasIndex("FolderId", "GroupId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_folder_permissions_folder_id_group_id")
+                        .HasFilter("group_id IS NOT NULL");
+
+                    b.HasIndex("FolderId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_folder_permissions_folder_id_user_id")
+                        .HasFilter("user_id IS NOT NULL");
+
+                    b.ToTable("folder_permissions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_folder_permissions_principal", "(user_id IS NULL) <> (group_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("sideral_context.Groups.Group", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.HasKey("Id")
+                        .HasName("pk_groups");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_groups_name");
+
+                    b.ToTable("groups", (string)null);
                 });
 
             modelBuilder.Entity("sideral_context.Users.RefreshToken", b =>
@@ -344,6 +705,23 @@ namespace sideral_context.Migrations
                     b.ToTable("post_likes", (string)null);
                 });
 
+            modelBuilder.Entity("GroupUser", b =>
+                {
+                    b.HasOne("sideral_context.Groups.Group", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_group_members_groups_group_id");
+
+                    b.HasOne("sideral_context.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("MembersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_group_members_users_members_id");
+                });
+
             modelBuilder.Entity("RoleUser", b =>
                 {
                     b.HasOne("sideral_context.Users.Role", null)
@@ -359,6 +737,149 @@ namespace sideral_context.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_roles_users_users_id");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.DmsActivity", b =>
+                {
+                    b.HasOne("sideral_context.Dms.Document", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_dms_activities_documents_document_id");
+
+                    b.HasOne("sideral_context.Dms.Folder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_dms_activities_folders_folder_id");
+
+                    b.HasOne("sideral_context.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_dms_activities_users_user_id");
+
+                    b.Navigation("Document");
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Document", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "CheckedOutBy")
+                        .WithMany()
+                        .HasForeignKey("CheckedOutById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_documents_users_checked_out_by_id");
+
+                    b.HasOne("sideral_context.Users.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_documents_users_created_by_id");
+
+                    b.HasOne("sideral_context.Users.User", "DeletedBy")
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_documents_users_deleted_by_id");
+
+                    b.HasOne("sideral_context.Dms.Folder", "Folder")
+                        .WithMany("Documents")
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_documents_folders_folder_id");
+
+                    b.Navigation("CheckedOutBy");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("DeletedBy");
+
+                    b.Navigation("Folder");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.DocumentVersion", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_versions_users_created_by_id");
+
+                    b.HasOne("sideral_context.Dms.Document", "Document")
+                        .WithMany("Versions")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_versions_documents_document_id");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Folder", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_folders_users_created_by_id");
+
+                    b.HasOne("sideral_context.Users.User", "DeletedBy")
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_folders_users_deleted_by_id");
+
+                    b.HasOne("sideral_context.Dms.Folder", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_folders_folders_parent_id");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("DeletedBy");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.FolderPermission", b =>
+                {
+                    b.HasOne("sideral_context.Dms.Folder", "Folder")
+                        .WithMany("Permissions")
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_folder_permissions_folders_folder_id");
+
+                    b.HasOne("sideral_context.Groups.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_folder_permissions_groups_group_id");
+
+                    b.HasOne("sideral_context.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_folder_permissions_users_user_id");
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("sideral_context.Users.RefreshToken", b =>
@@ -425,6 +946,20 @@ namespace sideral_context.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Document", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("sideral_context.Dms.Folder", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("Documents");
+
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("sideral_context.Users.User", b =>

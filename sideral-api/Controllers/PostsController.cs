@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using sideral_api.Models.Wall;
-using sideral_context.Users;
 using sideral_jobcode.Wall;
 
 namespace sideral_api.Controllers;
@@ -15,8 +14,6 @@ public class PostsController : BaseController
     {
         _wallManager = wallManager;
     }
-
-    private bool IsAdmin => User.IsInRole(Role.ADMIN);
 
     /// <summary>Messages du plus récent au plus ancien (?page=&amp;limit=). Pagination renvoyée dans les en-têtes.</summary>
     [HttpGet]

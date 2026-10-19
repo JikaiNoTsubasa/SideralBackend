@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using sideral_context.Dms;
+using sideral_context.Groups;
 using sideral_context.Users;
 using sideral_context.Wall;
 
@@ -12,6 +14,12 @@ public class SideralDbContext : DbContext
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<PostLike> PostLikes => Set<PostLike>();
+    public DbSet<Group> Groups => Set<Group>();
+    public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<FolderPermission> FolderPermissions => Set<FolderPermission>();
+    public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();
+    public DbSet<DmsActivity> DmsActivities => Set<DmsActivity>();
 
     public SideralDbContext(DbContextOptions<SideralDbContext> options) : base(options)
     {
@@ -85,6 +93,63 @@ public class SideralDbContext : DbContext
             e.HasOne(l => l.User)
              .WithMany()
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Group>(e =>
+        {
+            e.HasIndex(g => g.Name).IsUnique();
+            e.HasMany(g => g.Members)
+             .WithMany()
+             .UsingEntity(j => j.ToTable("group_members"));
+        });
+
+        // ---- GED : la suppression définitive d'un dossier (vidage de la corbeille) supprime en cascade
+        // ses sous-dossiers, documents, versions, droits et journal
+        modelBuilder.Entity<Folder>(e =>
+        {
+            e.HasIndex(f => f.ParentId);
+            e.HasOne(f => f.Parent)
+             .WithMany(f => f.Children)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.CreatedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(f => f.DeletedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FolderPermission>(e =>
+        {
+            e.HasIndex(p => new { p.FolderId, p.UserId }).IsUnique().HasFilter("user_id IS NOT NULL");
+            e.HasIndex(p => new { p.FolderId, p.GroupId }).IsUnique().HasFilter("group_id IS NOT NULL");
+            e.ToTable(t => t.HasCheckConstraint("ck_folder_permissions_principal", "(user_id IS NULL) <> (group_id IS NULL)"));
+            e.HasOne(p => p.Folder).WithMany(f => f.Permissions).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Group).WithMany().OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Document>(e =>
+        {
+            e.HasIndex(d => d.FolderId);
+            e.HasIndex(d => d.CheckedOutById);
+            e.HasOne(d => d.Folder).WithMany(f => f.Documents).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.CreatedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.CheckedOutBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.DeletedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DocumentVersion>(e =>
+        {
+            e.HasIndex(v => new { v.DocumentId, v.Major, v.Minor }).IsUnique();
+            e.HasOne(v => v.Document).WithMany(d => d.Versions).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(v => v.CreatedBy).WithMany().OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DmsActivity>(e =>
+        {
+            e.HasIndex(a => new { a.FolderId, a.CreatedOn });
+            e.HasIndex(a => new { a.DocumentId, a.CreatedOn });
+            e.Property(a => a.Action).HasConversion<string>();
+            e.HasOne(a => a.Folder).WithMany().OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.Document).WithMany().OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.User).WithMany().OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

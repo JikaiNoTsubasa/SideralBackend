@@ -39,3 +39,5 @@ public record RoleDto(long Id, string Key, string Name)
 {
     public static RoleDto From(Role role) => new(role.Id, role.Key, role.Name);
 }
+
+public record LoginSuggestionDto(string Login);

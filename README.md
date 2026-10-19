@@ -16,7 +16,7 @@ cp sideral-api/appsettings.Development.example.json sideral-api/appsettings.Deve
 - `ConnectionStrings:Sideral` : chaîne de connexion PostgreSQL
 - `JwtSettings:Secret` : secret aléatoire d'au moins 32 octets (`openssl rand -base64 48`)
 - `Cors:AllowedOrigins` : URL du frontend (`http://localhost:4200` en dev)
-- `Storage:RootPath` : dossier de stockage local des fichiers envoyés (défaut `storage`, relatif au dossier de l'API ; avatars dans `avatars/`)
+- `Storage:RootPath` : dossier de stockage local des fichiers envoyés (défaut `storage`, relatif au dossier de l'API ; avatars dans `avatars/`, fichiers de la GED dans `documents/`). **À sauvegarder avec la base.**
 - `Seed:Admin` : administrateur créé au démarrage **si la table `users` est vide** (changement de mot de passe obligatoire à la première connexion)
 
 ### Base de données
@@ -46,7 +46,7 @@ dotnet watch run --project sideral-api      # http://localhost:5000
 ```
 dependancies     → infrastructure générique : ApiException, hash PBKDF2, pagination, marqueurs IScoped/ISingleton
 sideral-context  → DbContext EF Core (PostgreSQL), entités, migrations
-sideral-jobcode  → logique métier (Managers) : Auth, Users, Wall...
+sideral-jobcode  → logique métier (Managers) : Auth, Users, Groups, Wall, Dms (GED)...
 sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 ```
 - Les classes qui implémentent `IScoped` / `ISingleton` (dans `dependancies` et `sideral-jobcode`) sont enregistrées automatiquement dans l'injection de dépendances.
@@ -71,10 +71,45 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | PUT/DELETE | `/api/me/avatar` | connecté (multipart, champ `file` : JPEG/PNG/WebP, 2 Mo max) |
 | GET | `/api/avatars/{fichier}` | public (noms aléatoires non devinables, cache immutable) |
 | GET | `/api/roles` | connecté |
-| GET/POST | `/api/users` | ADMIN |
+| GET/POST | `/api/users` | ADMIN (création : identifiant généré automatiquement) |
+| GET | `/api/users/login-suggestion?firstname=&lastname=` | ADMIN (identifiant qui sera attribué : 1re lettre du prénom + 2 premières du nom, en majuscules ; si pris, lettres suivantes du nom) |
 | GET/PUT/DELETE | `/api/users/{id}` | ADMIN (suppression logique) |
 | GET/POST | `/api/posts` | connecté (mur, paginé, plus récents d'abord) |
 | GET/PUT/DELETE | `/api/posts/{id}` | connecté (PUT : auteur ; DELETE : auteur ou ADMIN) |
 | PUT/DELETE | `/api/posts/{id}/like` | connecté |
 | GET/POST | `/api/posts/{id}/comments` | connecté |
 | DELETE | `/api/posts/{id}/comments/{commentId}` | auteur du commentaire, auteur du message ou ADMIN |
+| GET/POST | `/api/groups` | ADMIN (groupes d'utilisateurs) |
+| GET/PUT/DELETE | `/api/groups/{id}` | ADMIN |
+| GET | `/api/principals?search=&users=&groups=` | connecté (recherche d'utilisateurs / groupes pour les droits) |
+| GET | `/api/folders/root` | connecté (dossiers racine pour un ADMIN, dossiers partagés sinon) |
+| GET | `/api/folders/{id}` | lecteur (contenu : sous-dossiers visibles + documents) |
+| POST | `/api/folders` | gestionnaire du parent (racine : ADMIN) |
+| PUT/DELETE | `/api/folders/{id}` | gestionnaire (renommer / corbeille) |
+| PUT | `/api/folders/{id}/move` | gestionnaire du dossier et de la destination |
+| GET/PUT | `/api/folders/{id}/permissions` | lecteur / gestionnaire |
+| GET | `/api/folders/{id}/activity` | lecteur (paginé) |
+| POST | `/api/folders/{id}/documents` | contributeur (multipart `file`, tous types, 100 Mo max) |
+| GET | `/api/documents/{id}` | lecteur (fiche + versions) |
+| PUT | `/api/documents/{id}` | contributeur (nom, description) |
+| PUT | `/api/documents/{id}/move` | gestionnaire du dossier + contributeur de la destination |
+| DELETE | `/api/documents/{id}` | gestionnaire (corbeille) |
+| POST/DELETE | `/api/documents/{id}/checkout` | contributeur / auteur de l'extraction, gestionnaire ou ADMIN |
+| POST | `/api/documents/{id}/versions` | contributeur (checkin multipart `file`, `major`, `comment`) |
+| POST | `/api/documents/{id}/versions/{versionId}/restore` | contributeur |
+| GET | `/api/documents/{id}/link?versionId=&download=` | lecteur (jeton signé, 1 h) |
+| GET | `/api/documents/content?token=` | public, jeton signé (droits revérifiés) |
+| GET | `/api/documents/{id}/activity` | lecteur (paginé) |
+| GET | `/api/documents/checked-out` | connecté (mes extractions) |
+| GET/DELETE | `/api/trash` | connecté (éléments gérables / vider) |
+| POST | `/api/trash/{folders\|documents}/{id}/restore` | gestionnaire |
+| DELETE | `/api/trash/{folders\|documents}/{id}` | gestionnaire (suppression définitive) |
+
+### GED (documents)
+- **Droits** : par dossier, à des utilisateurs ou des groupes, niveaux `Read` (lecteur) < `Write` (contributeur) < `Manage` (gestionnaire). Un sous-dossier hérite des droits de son parent (`inherit_permissions`), en plus des siens ; l'héritage peut être désactivé. Les ADMIN sont gestionnaires partout et seuls à créer des dossiers racine.
+- Calcul : `DmsAccess` charge l'arbre complet des dossiers (colonnes légères) et les droits de l'utilisateur à chaque requête (`FolderTree`). Suffisant pour quelques milliers de dossiers ; au-delà, prévoir un chemin matérialisé.
+- **Versions** majeure/mineure (1.0, 1.1, 2.0) ; la version courante est la plus haute. Restaurer une version crée une nouvelle version mineure qui réutilise le même fichier.
+- **Extraction** (checkout) : verrou posé par une mise à jour conditionnelle ; tant qu'il est posé, seul son auteur peut modifier le document. L'archivage (`POST versions`) libère le verrou ; déposer une version sans extraction est permis si personne n'a extrait le document.
+- **Fichiers** : `{Storage:RootPath}/documents/{2 car.}/{guid}`, type MIME déterminé par signature binaire (sert uniquement à l'aperçu ; les fichiers texte, SVG et HTML compris, sont servis en `text/plain`). Le contenu est servi via un lien signé HMAC (clé dérivée du secret JWT) utilisable dans `<img>`/`<iframe>`/`<video>`, avec `nosniff` et `Content-Security-Policy: sandbox` (sauf PDF).
+- **Corbeille** : suppression logique (`deleted_on`) ; le contenu d'un dossier supprimé le suit. La suppression définitive efface en cascade sous-dossiers, documents, versions, droits, journal, puis les fichiers.
+- En production, ajuster la taille maximale des requêtes du reverse proxy (100 Mo par fichier).

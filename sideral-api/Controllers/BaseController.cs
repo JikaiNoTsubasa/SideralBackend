@@ -3,6 +3,7 @@ using dependancies.SharedClasses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using sideral_context.Users;
 using sideral_jobcode.Auth;
 
 namespace sideral_api.Controllers;
@@ -26,6 +27,8 @@ public abstract class BaseController : ControllerBase, IActionFilter
                 : throw new ApiException("Not authenticated", "Utilisateur non authentifié.", ApiException.TypeError.UNAUTHORIZED);
         }
     }
+
+    protected bool IsAdmin => User.IsInRole(Role.ADMIN);
 
     protected string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
 

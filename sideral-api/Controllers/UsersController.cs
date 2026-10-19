@@ -25,6 +25,13 @@ public class UsersController : BaseController
         return OkWithMeta(result.Items.Select(UserDto.From), result.Meta);
     }
 
+    /// <summary>Identifiant qui sera attribué à la création (?firstname=&amp;lastname=) : 3 lettres, unique.</summary>
+    [HttpGet("login-suggestion")]
+    public async Task<ActionResult<LoginSuggestionDto>> LoginSuggestion([FromQuery] string? firstname, [FromQuery] string? lastname, CancellationToken ct)
+    {
+        return new LoginSuggestionDto(await _userManager.SuggestLogin(firstname ?? string.Empty, lastname ?? string.Empty, ct));
+    }
+
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserDto>> Get(long id, CancellationToken ct)
     {
@@ -35,7 +42,7 @@ public class UsersController : BaseController
     [ProducesResponseType<UserDto>(StatusCodes.Status201Created)]
     public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserRequest request, CancellationToken ct)
     {
-        var user = await _userManager.Create(request.Login, request.Email, request.Firstname, request.Lastname, request.JobTitle, request.Password, request.Roles, ct: ct);
+        var user = await _userManager.Create(null, request.Email, request.Firstname, request.Lastname, request.JobTitle, request.Password, request.Roles, ct: ct);
         return CreatedAtAction(nameof(Get), new { id = user.Id }, UserDto.From(user));
     }
 

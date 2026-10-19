@@ -54,9 +54,27 @@ public class UserManager : IScoped
         return await _db.Roles.AsNoTracking().OrderBy(r => r.Id).ToListAsync(ct);
     }
 
-    public async Task<User> Create(string login, string email, string firstname, string lastname, string? jobTitle, string password, IEnumerable<string> roleKeys, bool forceUpdatePassword = false, CancellationToken ct = default)
+    /// <summary>Premier identifiant automatique disponible pour ce prénom / nom (voir LoginGenerator).</summary>
+    public async Task<string> SuggestLogin(string firstname, string lastname, CancellationToken ct = default)
     {
-        login = login.Trim();
+        var candidates = LoginGenerator.Candidates(firstname, lastname).ToList();
+        if (candidates.Count == 0)
+        {
+            throw new ApiException("Cannot generate login", "Le prénom et le nom doivent contenir au moins une lettre pour générer l'identifiant.", ApiException.TypeError.MODEL_ERROR, "USR_011");
+        }
+
+        // Les comptes supprimés (suppression logique) gardent leur identifiant : ils sont pris en compte
+        var prefix = candidates[0][..1];
+        var used = (await _db.Users.Where(u => u.Login.ToUpper().StartsWith(prefix)).Select(u => u.Login.ToUpper()).ToListAsync(ct)).ToHashSet();
+
+        return candidates.FirstOrDefault(c => !used.Contains(c))
+            ?? throw new ApiException("No login available", "Aucun identifiant disponible pour ce prénom et ce nom.", ApiException.TypeError.CONFLICT, "USR_012");
+    }
+
+    /// <summary>Crée un utilisateur. login null = identifiant généré automatiquement (voir LoginGenerator).</summary>
+    public async Task<User> Create(string? login, string email, string firstname, string lastname, string? jobTitle, string password, IEnumerable<string> roleKeys, bool forceUpdatePassword = false, CancellationToken ct = default)
+    {
+        login = login?.Trim() is { Length: > 0 } explicitLogin ? explicitLogin : await SuggestLogin(firstname, lastname, ct);
         email = email.Trim();
 
         await _CheckUnicity(login, email, null, ct);
@@ -75,7 +93,15 @@ public class UserManager : IScoped
         };
 
         _db.Users.Add(user);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Création simultanée du même identifiant : l'index unique a refusé la seconde
+            throw new ApiException("Login already used", $"L'identifiant « {login} » vient d'être attribué : réessayez.", ApiException.TypeError.CONFLICT, "USR_002", ex);
+        }
         return user;
     }
 
