@@ -101,6 +101,7 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | GET | `/api/documents/content?token=` | public, jeton signé (droits revérifiés) |
 | GET | `/api/documents/{id}/activity` | lecteur (paginé) |
 | GET | `/api/documents/checked-out` | connecté (mes extractions) |
+| GET | `/api/documents/search?q=` | connecté (nom, description et contenu ; résultats filtrés par les droits) |
 | GET/DELETE | `/api/trash` | connecté (éléments gérables / vider) |
 | POST | `/api/trash/{folders\|documents}/{id}/restore` | gestionnaire |
 | DELETE | `/api/trash/{folders\|documents}/{id}` | gestionnaire (suppression définitive) |
@@ -116,6 +117,7 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 - Configuration en base (`app_settings`, clés `fulltext.*`) via Admin > Full Text Server : activation, URL, code application et planification de l'indexeur (délai entre deux passages, 30 s par défaut ; documents par lot, 10 ; délai max. entre deux tentatives, 60 min). SokaFT n'a pas d'authentification : aucune clé d'API.
 - Extraction (`DocumentTextExtractor`) : texte brut, PDF (PdfPig), docx / xlsx / pptx, odt / ods / odp ; autres formats : seul le nom est indexé. 2 millions de caractères maximum.
 - Indexation (`FullTextIndexer`, tâche de fond) : chaque document a un état `full_text_status` (`PENDING` / `INDEXED` / `FAILED`). Nouveau document, nouvelle version, restauration, renommage → `PENDING` et réveil immédiat de la tâche ; sinon un passage selon la planification, lot plein = passage suivant immédiat. Serveur injoignable → nouvelle tentative après 1, 2, 4… min, jusqu'au plafond configuré. La planification est relue à chaque passage (enregistrer la configuration réveille la tâche). Rien n'est envoyé tant que le full text est désactivé. Changer le code application remet tous les documents en attente.
+- Recherche (`DocumentSearchManager`) : nom / description dans la base Sideral (tous les mots) + contenu via `POST {url}/api/index/search {search, application}` (texte échappé en syntaxe Lucene, joker `*` en fin de mot conservé). Les identifiants renvoyés sont retrouvés par `full_text_identifier` ; on ne garde que les documents hors corbeille dans un dossier lisible par l'utilisateur. Serveur indisponible : résultats sur le nom seulement, avec un avertissement. Limites SokaFT : 10 résultats maximum, sans tri par pertinence.
 - Test de connexion : SokaFT n'a pas d'endpoint de santé ; toute réponse HTTP de l'URL racine (404 compris) hors 5xx = serveur joignable.
 
 ### GED (documents)

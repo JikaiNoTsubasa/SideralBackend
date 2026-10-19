@@ -61,6 +61,15 @@ public record DocumentView(
     List<FolderRefView> Breadcrumb,
     List<VersionView> Versions);
 
+/// <summary>Résultat de recherche : MatchedName = nom ou description, MatchedContent = contenu (serveur full text).</summary>
+public record SearchResultView(DocumentItemView Document, long FolderId, string Location, bool MatchedName, bool MatchedContent);
+
+/// <summary>
+/// Résultats de recherche. FullTextEnabled = recherche dans le contenu active ; FullTextError = elle a échoué
+/// (les résultats sur le nom restent renvoyés).
+/// </summary>
+public record DocumentSearchView(string Query, List<SearchResultView> Results, bool FullTextEnabled, string? FullTextError);
+
 public record CheckedOutDocumentView(DocumentItemView Document, long FolderId, string Location);
 
 public record PermissionEntryView(PrincipalView Principal, PermissionLevel Level);

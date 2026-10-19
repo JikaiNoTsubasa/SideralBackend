@@ -12,10 +12,19 @@ namespace sideral_api.Controllers;
 public class DocumentsController : BaseController
 {
     private readonly DocumentManager _documentManager;
+    private readonly DocumentSearchManager _searchManager;
 
-    public DocumentsController(DocumentManager documentManager)
+    public DocumentsController(DocumentManager documentManager, DocumentSearchManager searchManager)
     {
         _documentManager = documentManager;
+        _searchManager = searchManager;
+    }
+
+    /// <summary>Recherche (?q=) dans le nom, la description et le contenu (serveur full text) des documents accessibles.</summary>
+    [HttpGet("search")]
+    public async Task<ActionResult<DocumentSearchDto>> Search([FromQuery] string? q, CancellationToken ct)
+    {
+        return DocumentSearchDto.From(await _searchManager.Search(LoggedUserId, IsAdmin, q, ct));
     }
 
     [HttpGet("{id:long}")]

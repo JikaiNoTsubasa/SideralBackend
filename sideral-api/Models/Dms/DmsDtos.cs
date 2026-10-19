@@ -89,6 +89,18 @@ public record DocumentDto(
         d.Versions.Select(VersionDto.From).ToList());
 }
 
+/// <summary>Résultat de recherche : MatchedName = nom ou description, MatchedContent = contenu (full text).</summary>
+public record SearchResultDto(DocumentItemDto Document, long FolderId, string Location, bool MatchedName, bool MatchedContent)
+{
+    public static SearchResultDto From(SearchResultView r) => new(DocumentItemDto.From(r.Document), r.FolderId, r.Location, r.MatchedName, r.MatchedContent);
+}
+
+/// <summary>Résultats de recherche ; FullTextError renseigné si la recherche dans le contenu a échoué.</summary>
+public record DocumentSearchDto(string Query, IEnumerable<SearchResultDto> Results, bool FullTextEnabled, string? FullTextError)
+{
+    public static DocumentSearchDto From(DocumentSearchView s) => new(s.Query, s.Results.Select(SearchResultDto.From).ToList(), s.FullTextEnabled, s.FullTextError);
+}
+
 public record CheckedOutDocumentDto(DocumentItemDto Document, long FolderId, string Location)
 {
     public static CheckedOutDocumentDto From(CheckedOutDocumentView c) => new(DocumentItemDto.From(c.Document), c.FolderId, c.Location);
