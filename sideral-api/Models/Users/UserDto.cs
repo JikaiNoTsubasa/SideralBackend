@@ -9,11 +9,14 @@ public record UserDto(
     string Firstname,
     string Lastname,
     string? JobTitle,
+    string? Avatar,
     bool IsActive,
     bool ForceUpdatePassword,
     IEnumerable<string> Roles,
     DateTime CreatedOn,
-    DateTime? LastLoginOn)
+    DateTime? LastLoginOn,
+    string Theme,
+    string AccentColor)
 {
     public static UserDto From(User user) => new(
         user.Id,
@@ -22,11 +25,14 @@ public record UserDto(
         user.Firstname,
         user.Lastname,
         user.JobTitle,
+        user.Avatar,
         user.IsActive,
         user.ForceUpdatePassword,
         user.Roles.Select(r => r.Key).Order(),
         user.CreatedOn,
-        user.LastLoginOn);
+        user.LastLoginOn,
+        user.Theme,
+        user.AccentColor);
 }
 
 public record RoleDto(long Id, string Key, string Name)

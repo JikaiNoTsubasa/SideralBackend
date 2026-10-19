@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using sideral_context;
 using sideral_context.Users;
 using sideral_jobcode.Auth;
+using sideral_jobcode.Storage;
 
 namespace sideral_jobcode.Users;
 
@@ -15,12 +16,14 @@ public class UserManager : IScoped
     private readonly SideralDbContext _db;
     private readonly IHash _hash;
     private readonly AuthManager _authManager;
+    private readonly AvatarStorage _avatarStorage;
 
-    public UserManager(SideralDbContext db, IHash hash, AuthManager authManager)
+    public UserManager(SideralDbContext db, IHash hash, AuthManager authManager, AvatarStorage avatarStorage)
     {
         _db = db;
         _hash = hash;
         _authManager = authManager;
+        _avatarStorage = avatarStorage;
     }
 
     private IQueryable<User> _Users => _db.Users.Include(u => u.Roles).Where(u => !u.Deleted);
@@ -142,6 +145,64 @@ public class UserManager : IScoped
         user.UpdatedOn = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+        return user;
+    }
+
+    public async Task<User> UpdatePreferences(long id, string theme, string accentColor, CancellationToken ct = default)
+    {
+        var user = await GetById(id, ct);
+        theme = theme.Trim().ToLower();
+        accentColor = accentColor.Trim().ToLower();
+
+        if (!UserPreferences.THEMES.Contains(theme))
+        {
+            throw new ApiException("Unknown theme", $"Thème inconnu : {theme}.", ApiException.TypeError.MODEL_ERROR, "USR_009");
+        }
+        if (!UserPreferences.ACCENT_COLORS.Contains(accentColor))
+        {
+            throw new ApiException("Unknown accent color", $"Couleur inconnue : {accentColor}.", ApiException.TypeError.MODEL_ERROR, "USR_010");
+        }
+
+        user.Theme = theme;
+        user.AccentColor = accentColor;
+        user.UpdatedOn = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return user;
+    }
+
+    /// <summary>Remplace l'avatar ; l'ancien fichier est supprimé une fois la base à jour.</summary>
+    public async Task<User> UpdateAvatar(long id, Stream content, long length, CancellationToken ct = default)
+    {
+        var user = await GetById(id, ct);
+        var previous = user.Avatar;
+
+        var fileName = await _avatarStorage.Save(id, content, length, ct);
+        user.Avatar = fileName;
+        user.UpdatedOn = DateTime.UtcNow;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            _avatarStorage.Delete(fileName);
+            throw;
+        }
+
+        _avatarStorage.Delete(previous);
+        return user;
+    }
+
+    public async Task<User> DeleteAvatar(long id, CancellationToken ct = default)
+    {
+        var user = await GetById(id, ct);
+        var previous = user.Avatar;
+
+        user.Avatar = null;
+        user.UpdatedOn = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        _avatarStorage.Delete(previous);
         return user;
     }
 

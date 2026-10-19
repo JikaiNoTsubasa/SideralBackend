@@ -11,3 +11,6 @@ bin\\Debug/
 appsettings.Development.json
 appsettings.Local.json
 appsettings.json
+
+# Fichiers envoyés (avatars...)
+storage/

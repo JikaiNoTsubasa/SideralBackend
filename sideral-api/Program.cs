@@ -10,6 +10,7 @@ using sideral_api.Classes;
 using sideral_context;
 using sideral_context.Users;
 using sideral_jobcode.Auth;
+using sideral_jobcode.Storage;
 using sideral_jobcode.Users;
 
 namespace sideral_api;
@@ -35,6 +36,8 @@ public partial class Program
         var jwtSettings = builder.Configuration.GetSection(JwtSettings.SECTION).Get<JwtSettings>() ?? new JwtSettings();
         jwtSettings.Validate();
         builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SECTION));
+        builder.Services.Configure<StorageSettings>(builder.Configuration.GetSection(StorageSettings.SECTION));
+        builder.Services.PostConfigure<StorageSettings>(s => s.RootPath = Path.Combine(builder.Environment.ContentRootPath, s.RootPath));
 
         var connectionString = builder.Configuration.GetConnectionString("Sideral")
             ?? throw new InvalidOperationException("ConnectionStrings:Sideral is missing.");

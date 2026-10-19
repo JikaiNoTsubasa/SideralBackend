@@ -67,3 +67,14 @@ public class ChangePasswordRequest
     [Required, MinLength(8)]
     public string NewPassword { get; set; } = string.Empty;
 }
+
+public class UpdatePreferencesRequest
+{
+    /// <summary>light, dark ou system.</summary>
+    [Required, MaxLength(20)]
+    public string Theme { get; set; } = string.Empty;
+
+    /// <summary>indigo, blue, teal, green, orange, rose ou violet.</summary>
+    [Required, MaxLength(20)]
+    public string AccentColor { get; set; } = string.Empty;
+}

@@ -149,6 +149,19 @@ namespace sideral_context.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("indigo")
+                        .HasColumnName("accent_color");
+
+                    b.Property<string>("Avatar")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("avatar");
+
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
@@ -204,6 +217,14 @@ namespace sideral_context.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("password");
 
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("light")
+                        .HasColumnName("theme");
+
                     b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
@@ -220,6 +241,107 @@ namespace sideral_context.Migrations
                         .HasDatabaseName("ix_users_login");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.Post", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AuthorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.HasKey("Id")
+                        .HasName("pk_posts");
+
+                    b.HasIndex("AuthorId")
+                        .HasDatabaseName("ix_posts_author_id");
+
+                    b.HasIndex("CreatedOn")
+                        .HasDatabaseName("ix_posts_created_on");
+
+                    b.ToTable("posts", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.PostComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AuthorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("post_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_post_comments");
+
+                    b.HasIndex("AuthorId")
+                        .HasDatabaseName("ix_post_comments_author_id");
+
+                    b.HasIndex("PostId", "CreatedOn")
+                        .HasDatabaseName("ix_post_comments_post_id_created_on");
+
+                    b.ToTable("post_comments", (string)null);
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.PostLike", b =>
+                {
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("post_id");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.HasKey("PostId", "UserId")
+                        .HasName("pk_post_likes");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_post_likes_user_id");
+
+                    b.ToTable("post_likes", (string)null);
                 });
 
             modelBuilder.Entity("RoleUser", b =>
@@ -251,9 +373,70 @@ namespace sideral_context.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("sideral_context.Wall.Post", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_posts_users_author_id");
+
+                    b.Navigation("Author");
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.PostComment", b =>
+                {
+                    b.HasOne("sideral_context.Users.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_post_comments_users_author_id");
+
+                    b.HasOne("sideral_context.Wall.Post", "Post")
+                        .WithMany("Comments")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_post_comments_posts_post_id");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.PostLike", b =>
+                {
+                    b.HasOne("sideral_context.Wall.Post", "Post")
+                        .WithMany("Likes")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_post_likes_posts_post_id");
+
+                    b.HasOne("sideral_context.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_post_likes_users_user_id");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("sideral_context.Users.User", b =>
                 {
                     b.Navigation("RefreshTokens");
+                });
+
+            modelBuilder.Entity("sideral_context.Wall.Post", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Likes");
                 });
 #pragma warning restore 612, 618
         }

@@ -16,6 +16,7 @@ cp sideral-api/appsettings.Development.example.json sideral-api/appsettings.Deve
 - `ConnectionStrings:Sideral` : chaîne de connexion PostgreSQL
 - `JwtSettings:Secret` : secret aléatoire d'au moins 32 octets (`openssl rand -base64 48`)
 - `Cors:AllowedOrigins` : URL du frontend (`http://localhost:4200` en dev)
+- `Storage:RootPath` : dossier de stockage local des fichiers envoyés (défaut `storage`, relatif au dossier de l'API ; avatars dans `avatars/`)
 - `Seed:Admin` : administrateur créé au démarrage **si la table `users` est vide** (changement de mot de passe obligatoire à la première connexion)
 
 ### Base de données
@@ -45,7 +46,7 @@ dotnet watch run --project sideral-api      # http://localhost:5000
 ```
 dependancies     → infrastructure générique : ApiException, hash PBKDF2, pagination, marqueurs IScoped/ISingleton
 sideral-context  → DbContext EF Core (PostgreSQL), entités, migrations
-sideral-jobcode  → logique métier (Managers) : Auth, Users...
+sideral-jobcode  → logique métier (Managers) : Auth, Users, Wall...
 sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 ```
 - Les classes qui implémentent `IScoped` / `ISingleton` (dans `dependancies` et `sideral-jobcode`) sont enregistrées automatiquement dans l'injection de dépendances.
@@ -66,6 +67,14 @@ sideral-api      → contrôleurs fins, DTOs, pipeline ASP.NET Core
 | GET | `/api/ping` | public |
 | GET/PUT | `/api/me` | connecté |
 | PUT | `/api/me/password` | connecté |
+| PUT | `/api/me/preferences` | connecté (thème `light`/`dark`/`system`, couleur principale) |
+| PUT/DELETE | `/api/me/avatar` | connecté (multipart, champ `file` : JPEG/PNG/WebP, 2 Mo max) |
+| GET | `/api/avatars/{fichier}` | public (noms aléatoires non devinables, cache immutable) |
 | GET | `/api/roles` | connecté |
 | GET/POST | `/api/users` | ADMIN |
 | GET/PUT/DELETE | `/api/users/{id}` | ADMIN (suppression logique) |
+| GET/POST | `/api/posts` | connecté (mur, paginé, plus récents d'abord) |
+| GET/PUT/DELETE | `/api/posts/{id}` | connecté (PUT : auteur ; DELETE : auteur ou ADMIN) |
+| PUT/DELETE | `/api/posts/{id}/like` | connecté |
+| GET/POST | `/api/posts/{id}/comments` | connecté |
+| DELETE | `/api/posts/{id}/comments/{commentId}` | auteur du commentaire, auteur du message ou ADMIN |
